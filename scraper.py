@@ -98,23 +98,24 @@ soup = BeautifulSoup(html, 'lxml')
 
 #### SCRAPE DATA
 
-blocks = soup.find('caption', text=re.compile('Expenditure')).find_all_next('a')
-for block in blocks:
-    title = block['title']
-    if 'Expenditure' in title or 'Executive' in title:
-        url = 'http://www.dvh.nhs.uk'+block['href']
-        title_name = title.replace('Expenditure Information of &#163;25k and Over', '').strip().replace('Expenditure of &#163;25,000 -', '').strip().replace('Expenditure Over &#163;25K -', '').strip().replace('Expenditure Over &#163;25,000 -', '').strip().replace('Expenditure over &#163;25k -', '').strip().replace('Expenditure Information of 25k and Over', '').strip().replace('Expenditure information over &#163;25,000  -', '').strip().replace('Expenditure of &#163;25k -', '').strip().replace('(', '').strip().replace(')', '').strip().split('-')[-1].strip().split('[')[0].strip()
-        csvMth = title_name[:3]
-        csvYr = title_name[-4:]
-        if not csvYr and not csvMth:
-            csvMth = 'Q0'
-            csvYr = '2010'
-        if 'ober' in csvYr:
-            csvYr = '2013'
-        csvMth = convert_mth_strings(csvMth.upper())
-        data.append([csvYr, csvMth, url])
-    if 'Follow' in title:
-        break
+# blocks = soup.find('caption', text=re.compile('Expenditure')).find_all_next('a')
+blocks = soup.find('caption', text=re.compile('Expenditure')).find_next('thead').find_all('th')
+for i, block in enumerate(blocks):
+    title = block.text.strip()
+    csvYr = title
+    rows = soup.find('caption', text=re.compile('Expenditure')).find_next('tbody').find_all('tr')
+    for row in rows:
+        csvMth = row.find_all('td')[i].text.strip()[:3]
+        url = None
+        try:
+            url = 'http://www.dvh.nhs.uk'+row.find_all('td')[i].find('a')['href']
+        except:
+            pass
+        if url:
+            if 'April - September' in row.find_all('td')[i].text.strip():
+                csvMth = 'Q0'
+            csvMth = convert_mth_strings(csvMth.upper())
+            data.append([csvYr, csvMth, url])
 
 
 #### STORE DATA 1.0
